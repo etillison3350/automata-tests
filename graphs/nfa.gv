@@ -1,0 +1,39 @@
+digraph nfa {
+	graph [rankdir=LR]
+	node [shape=circle]
+	{
+		graph [margin="0,0" rank=source]
+		"" [fixedsize=true margin="0,0" shape=none width=0]
+	}
+	{
+		graph [rank=sink]
+		25 [shape=doublecircle]
+	}
+	0
+	1
+	3
+	5
+	7
+	9
+	11
+	13
+	15
+	17
+	19
+	21
+	23
+	0 -> 1 [label=2]
+	1 -> 3 [label="-"]
+	3 -> 5 [label=5]
+	5 -> 7 [label=" "]
+	7 -> 9 [label=z]
+	9 -> 11 [label=":"]
+	11 -> 13 [label=" "]
+	13 -> 15 [label=z]
+	15 -> 17 [label=z]
+	17 -> 19 [label=z]
+	19 -> 21 [label=t]
+	21 -> 23 [label=v]
+	23 -> 25 [label=z]
+	"" -> 0
+}

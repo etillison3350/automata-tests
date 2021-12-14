@@ -1,0 +1,14 @@
+digraph dfa {
+	graph [label="
+/((c|c)*|c)*/" rankdir=LR]
+	node [shape=circle]
+	{
+		graph [margin="0,0" rank=source]
+		"" [fixedsize=true margin="0,0" shape=none width=0]
+	}
+	0 [shape=doublecircle]
+	1 [shape=doublecircle]
+	0 -> 1 [label=c]
+	1 -> 1 [label=c]
+	"" -> 0
+}

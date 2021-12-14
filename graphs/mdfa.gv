@@ -1,0 +1,12 @@
+digraph mdfa {
+	graph [label="
+/((c|c)*|c)*/" rankdir=LR]
+	node [shape=circle]
+	{
+		graph [margin="0,0" rank=source]
+		"" [fixedsize=true margin="0,0" shape=none width=0]
+	}
+	0 [shape=doublecircle]
+	0 -> 0 [label=c]
+	"" -> 0
+}
