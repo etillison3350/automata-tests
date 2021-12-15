@@ -12,44 +12,37 @@ import random
 
 
 def distance_table(nfa: NFA, string: str) -> dict[int, list[tuple[int | float, ...]]]:
-    path_lengths: dict[tuple[int, int], float] = {}
-    eps_lengths: dict[tuple[int, int], float] = {}
+    path_lengths: dict[tuple[int, int], tuple[float, float]] = {}
+    # eps_lengths: dict[tuple[int, int], float] = {}
     included_syms = defaultdict(bool)
     for start in nfa.states:
         for end in nfa.states:
             if (start, '') in nfa.transitions and end in nfa.transitions[start, '']:
-                path_lengths[start, end] = 0
-                eps_lengths[start, end] = 1
+                path_lengths[start, end] = (0, 1)
             else:
                 for sym in nfa.alphabet:
                     if (start, sym) in nfa.transitions and end in nfa.transitions[start, sym]:
-                        path_lengths[start, end] = 1
-                        eps_lengths[start, end] = 1
+                        path_lengths[start, end] = (1, 0)
                         included_syms[start, end, sym] = True
-                path_lengths.setdefault((start, end), math.inf)
-                eps_lengths.setdefault((start, end), math.inf)
-    for state in nfa.states:
-        eps_lengths[state, state] = 0
+                path_lengths.setdefault((start, end), (math.inf, math.inf))
     for k in nfa.states:
         new_path_lengths = {}
-        new_eps_lengths = {}
         new_included_syms = {}
         for start in nfa.states:
             for end in nfa.states:
                 current = path_lengths[start, end]
-                thru_k = path_lengths[start, k] + path_lengths[k, end]
+                thru_k = (path_lengths[start, k][0] + path_lengths[k, end][0],
+                          path_lengths[start, k][1] + path_lengths[k, end][1])
                 new_path_lengths[start, end] = min(current, thru_k)
-                new_eps_lengths[start, end] = min(eps_lengths[start, end], eps_lengths[start, k] + eps_lengths[k, end])
                 for sym in nfa.alphabet:
-                    if current < thru_k or (math.isinf(current) and math.isinf(thru_k)):
+                    if current[0] < thru_k[0] or (math.isinf(current[0]) and math.isinf(thru_k[0])):
                         new_included_syms[start, end, sym] = included_syms[start, end, sym]
-                    elif current > thru_k:
+                    elif current[0] > thru_k[0]:
                         new_included_syms[start, end, sym] = included_syms[start, k, sym] or included_syms[k, end, sym]
                     else:
                         new_included_syms[start, end, sym] = included_syms[start, end, sym] or \
                                                              included_syms[start, k, sym] or included_syms[k, end, sym]
         path_lengths = new_path_lengths
-        eps_lengths = new_eps_lengths
         included_syms = new_included_syms
 
     print('   ', end='')
@@ -59,43 +52,36 @@ def distance_table(nfa: NFA, string: str) -> dict[int, list[tuple[int | float, .
     for start in nfa.states:
         print('{:>2d}'.format(start), end=' ')
         for end in nfa.states:
-            if math.isinf(path_lengths[start, end]):
+            if math.isinf(path_lengths[start, end][0]):
                 print(' . ', end='')
             else:
-                print('{:>2.0f}'.format(eps_lengths[start, end]), end=' ')
+                print('{:>2.0f}'.format(path_lengths[start, end][0]), end=' ')
         print()
     # print(included_syms)
 
     table: dict[int, list[tuple[int | float, ..., int]]]
-    table = {state: [(0 if state == nfa.start_state else path_lengths[nfa.start_state, state],
-                      eps_lengths[nfa.start_state, state] ** 2,
-                      eps_lengths[nfa.start_state, state],
-                      state != nfa.start_state,
+    table = {state: [(0 if state == nfa.start_state else path_lengths[nfa.start_state, state][0],
                       nfa.start_state)]
              for state in nfa.states}
 
     for ln, sym in enumerate(string):
         for state in nfa.states:
-            min_val = (math.inf, math.inf, math.inf, True, math.inf)
+            min_val = (math.inf, math.inf)
             for src in nfa.states:
                 prev_cost = table[src][ln][0]
-                if path_lengths[src, state] == 0:
-                    edge_cost = 1 - included_syms.setdefault((state, state, sym), False)
-                else:
-                    edge_cost = path_lengths[src, state] - included_syms.setdefault((src, state, sym), False)
-                if src == state and edge_cost > 1:
+                if path_lengths[src, state][0] == 0:
                     edge_cost = 1
+                else:
+                    edge_cost = path_lengths[src, state][0] - included_syms.setdefault((src, state, sym), False)
+                # if src == state and edge_cost > 1:
+                #     edge_cost = 1
 
                 # print('{:>2d} -> {:>2d} = {:>3.0f} + {:>3.0f}; {:>3.0f}/{:>3.0f}'.format(src, state, prev_cost, edge_cost, eps_lengths[nfa.start_state, src], eps_lengths[src, state]))
 
-                min_val = min(min_val, (
-                    prev_cost + edge_cost,
-                    table[src][ln][1] + eps_lengths[src, state] ** 2,
-                    eps_lengths[src, state],
-                    not included_syms.setdefault((src, state, sym), False),
-                    src))
+                min_val = min(min_val, (prev_cost + edge_cost,
+                                        src))
             table[state].append(min_val)
-        print()
+        # print()
 
     print(' ' * 10, end='')
     for sym in string:
@@ -137,7 +123,7 @@ def update_nfa(nfa: NFA, string: str) -> NFA:
     curr_state = nfa.final_state
     for i in range(len(table[nfa.final_state]) - 1, -1, -1):
         prev_state = table[curr_state][i][-1]
-        new = table[curr_state][i][3]
+        new = True  # table[curr_state][i][3]
         if new:
             nfa.transitions[prev_state, '' if i == 0 else string[i - 1]].add(curr_state)
         print(prev_state, curr_state, string[i - 1], new)
@@ -171,9 +157,9 @@ if __name__ == '__main__':
 10-14 g: ggggggxsgggqggg
 9-19 q: fjlqbvtdngwvtbnsgfm""".splitlines()
 
-    nfa = parsing.parse_regex_as_nfa(inp[0])  # .to_dfa().minimize().to_nfa()
+    nfa = parsing.parse_regex_as_nfa(inp[0], use_eps=True)  # .to_dfa().minimize().to_nfa()
     nfa.dump('./graphs')
-    for string in inp[:10]:
+    for string in inp[1:2]:
         update_nfa(nfa, string)
         if not nfa.accept(string):
             nfa.dump('./graphs', 'nnfa')

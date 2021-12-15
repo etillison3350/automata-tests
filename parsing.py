@@ -121,7 +121,7 @@ def parse_regex_as_string(regex: str) -> str:
     return construct_string(parse_regex(regex))
 
 
-def construct_nfa(postfix: list[int | str]) -> NFA[str]:
+def construct_nfa(postfix: list[int | str], use_eps=False) -> NFA[str]:
     if len(postfix) == 0:
         return NFA(frozenset((0,)), frozenset(), {}, 0, 0)
 
@@ -139,10 +139,16 @@ def construct_nfa(postfix: list[int | str]) -> NFA[str]:
                 stack.append(syms[0].plus())
             elif sym == 4:
                 stack.append(syms[0].opt())
+        elif use_eps:
+            stack.append(NFA((0, 1, 2),
+                             () if sym is None else (sym,),
+                             {(0, sym): (1,), (1, ''): (2,)},
+                             0,
+                             2))
         else:
-            stack.append(NFA(frozenset((0, 1)),
-                             frozenset() if sym is None else frozenset((sym,)),
-                             {(0, sym): frozenset((1,))},
+            stack.append(NFA((0, 1),
+                             () if sym is None else (sym,),
+                             {(0, sym): (1,)},
                              0,
                              1))
     if len(stack) != 1:
@@ -150,8 +156,8 @@ def construct_nfa(postfix: list[int | str]) -> NFA[str]:
     return stack[0]
 
 
-def parse_regex_as_nfa(regex: str) -> NFA[str]:
-    return construct_nfa(parse_regex(regex))
+def parse_regex_as_nfa(regex: str, use_eps=False) -> NFA[str]:
+    return construct_nfa(parse_regex(regex), use_eps)
 
 
 def postfix_rip_combiner(pre_t: _T | tuple[_T | int, ...],
